@@ -1,0 +1,32 @@
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "Your_password123!"
+    ports:
+      - "1433:1433"
+    volumes:
+      - circdesk-sqlserver-data:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -Q 'SELECT 1' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: .
+    environment:
+      ASPNETCORE_ENVIRONMENT: "Production"
+      ConnectionStrings__DefaultConnection: "Server=sqlserver,1433;Database=CircDesk;User Id=sa;Password=Your_password123!;TrustServerCertificate=True;"
+      Jwt__Issuer: "CircDesk"
+      Jwt__Audience: "CircDesk.Clients"
+      Jwt__Key: "CHANGE_THIS_DEV_ONLY_SIGNING_KEY_32+CHARS"
+    ports:
+      - "8080:8080"
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+
+volumes:
+  circdesk-sqlserver-data:
